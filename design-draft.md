@@ -1,3 +1,7 @@
 # Rascunho de projeto — técnica 2
 
 Registrado antes da implementação. Técnica: retículo central com controles separados. Após selecionar o objeto correto, mantenha “Mover” pressionado para posicioná-lo na interseção do retículo central com a superfície; solte para fixá-lo. Botões giram o objeto em passos de 5°. A separação dos graus de liberdade reduz acoplamentos acidentais (conceito de separação de tarefas e controle explícito). Previsão: produzirá menor erro angular e menos rotações acidentais que o gesto de dois dedos, possivelmente com maior tempo e cansaço dos braços por exigir movimento do telefone. A comparação deve ser feita com participantes reais.
+
+## Alteração posterior — carregar com o celular
+
+A proposta inicial acima foi substituída após a implementação. Ao tocar no objeto correto e depois em “Selecionar para carregar”, o objeto acompanha a interseção do centro da visão com o plano da superfície; girar o telefone altera a orientação horizontal mantendo o deslocamento angular inicial. “Fixar objeto” termina o movimento. O controle é direto e aproximadamente isomórfico: movimento e rotação do aparelho comandam o objeto. Previsão: pode facilitar o posicionamento por movimento corporal, mas exige apontar para a superfície, pode cansar os braços e acoplar tradução e rotação. A comparação deve usar dados reais.
