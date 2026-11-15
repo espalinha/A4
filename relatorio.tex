@@ -1,0 +1,60 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{array}
+\geometry{margin=2.3cm}
+\title{MAC0623 --- Trabalho 4: encaixe em realidade aumentada móvel}
+\author{Matheus Rodrigues da Silva Espalaor}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section{Objetivo e tarefa}
+O objetivo é comparar duas técnicas de manipulação em realidade aumentada móvel. O participante aponta o celular para uma superfície horizontal e toca na tela para posicionar um alvo translúcido. Três objetos coloridos aparecem a aproximadamente 40 cm do alvo. O participante seleciona o objeto da mesma cor e tenta alinhá-lo ao alvo, ajustando a posição no plano e a rotação em torno do eixo vertical. O encaixe é registrado quando a distância é de no máximo 2 cm e o erro angular é de no máximo 10 graus. A geometria assimétrica ajuda a perceber a orientação.
+
+O protótipo usa \texttt{three.js}, WebXR e \textit{hit-test}. A implementação foi preparada para uso em iPhone com o aplicativo WebXR Viewer; a compatibilidade e os resultados devem ser verificados no aparelho usado na coleta. Código: \url{https://github.com/espalinha/A4}. Endereço HTTPS da aplicação: \textbf{[preencher após confirmar a publicação]}.
+
+\section{Técnicas e projeto}
+\textbf{Toque (referência).} O participante toca no objeto para selecioná-lo; um dedo arrasta o objeto sobre o plano e dois dedos ajustam a orientação. O objeto correto selecionado recebe realce.
+
+\textbf{Retículo e botões (técnica proposta).} Após selecionar o objeto correto, o participante mantém pressionado o botão de movimento e aponta o retículo central para posicionar o objeto. Dois botões ajustam a orientação em passos de 5 graus. Separar translação e rotação é uma aplicação da separação de graus de liberdade: a intenção é reduzir mudanças acidentais de orientação durante a movimentação. A previsão registrada antes da implementação foi que a técnica produziria menos rotações acidentais e menor erro angular que o gesto de dois dedos, possivelmente ao custo de maior tempo e fadiga dos braços. O rascunho original está em \texttt{design-draft.md}.
+
+Durante o desenvolvimento foi experimentada uma alternativa de carregar o objeto com o movimento do celular. No teste relatado, ela não permitiu a manipulação pretendida; por isso, foi restaurada a técnica de retículo e botões. Essa experiência preliminar não constitui dado do estudo.
+
+\section{Instrumentação e procedimento}
+O aplicativo exporta um CSV com identificador anônimo, técnica, número da tentativa, tempo, erro final de posição em centímetros, erro final de orientação em graus, seleções incorretas, quantidade de contatos e perdas de rastreamento. A perda é contada em transições para ausência de pose ou de resultado de \textit{hit-test}; a contagem não mede a duração da perda. Os erros são registrados no instante em que as duas tolerâncias são atingidas. Portanto, por construção, os erros finais são limitados pelas tolerâncias e podem não revelar diferenças finas de precisão entre técnicas.
+
+\textbf{Diferença em relação ao enunciado:} na versão atual, o cronômetro começa no primeiro toque em qualquer objeto, inclusive incorreto, e não na seleção do objeto correto. A contagem de contatos inclui contatos iniciados durante a tentativa; a colocação inicial do espaço também pode ser contada na primeira tentativa. Essas definições devem ser consideradas na interpretação e mantidas consistentes entre condições.
+
+São cinco configurações fixas por técnica, na mesma ordem para todos os participantes. A proposta de coleta é de pelo menos dois participantes, além do autor, cada um realizando as duas técnicas. Contrabalancear a ordem: P01 faz toque e depois retículo; P02 faz retículo e depois toque. Registrar qualquer alteração ao protocolo. Após cada técnica, perguntar: ``Quão cansados estão seus braços?'' em escala de 1 a 5. Registrar também a superfície, iluminação, aparelho, versão do sistema e condições de rastreamento. Exportar o CSV antes de limpar os dados do navegador. O estudo efetivo, os participantes, o empréstimo de aparelho e eventuais colaborações devem ser descritos conforme ocorrerem.
+
+\section{Resultados}
+\textbf{Preencher após a coleta; nenhum resultado foi inventado.} Informar a quantidade de participantes e tentativas válidas, perdas de dados e critérios de exclusão. Resumir tempos e erros, seleções incorretas e fadiga por técnica; anexar o CSV bruto anonimizado.
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Medida & Toque & Retículo \\
+\midrule
+Tempo de conclusão (s) & [\ldots] & [\ldots] \\
+Erro de posição (cm) & [\ldots] & [\ldots] \\
+Erro de orientação (graus) & [\ldots] & [\ldots] \\
+Seleções incorretas & [\ldots] & [\ldots] \\
+Fadiga dos braços (1--5) & [\ldots] & [\ldots] \\
+\bottomrule
+\end{tabular}
+\end{center}
+Indicar se os valores apresentados são médias, medianas ou totais e relatar a ordem usada por cada participante.
+
+\section{Discussão}
+\textbf{Preencher após a coleta.} A previsão foi [apoiada / não apoiada / inconclusiva], porque [evidências observadas]. Discutir o compromisso entre tempo, precisão, seleções incorretas e fadiga, sem generalizar além da pequena amostra. Considerar o efeito da ordem fixa dos cenários, do aprendizado e das tolerâncias sobre as medidas.
+
+\textbf{Problemas específicos de RA:} [descrever os problemas realmente observados, como deriva, oclusão, dedo cobrindo o alvo ou perda de rastreamento, e explicar como afetaram a execução e os resultados]. Superfície: [\ldots]. Iluminação: [\ldots].
+
+\section{Materiais para entrega}
+Além deste relatório, incluir o código ou link do repositório, URL HTTPS funcional, rascunho de projeto, CSV com todas as tentativas anonimizadas e gravação de tela de até um minuto mostrando uma tentativa de cada técnica. Conferir a funcionalidade no aparelho antes da coleta e registrar limitações observadas.
+\end{document}
