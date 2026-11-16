@@ -1,0 +1,13 @@
+technique,metric,n,mean,std
+touch,completion_time_s,10,6.311,3.1081807826730055
+touch,pos_error_cm,10,1.667,0.42499803921116314
+touch,yaw_error_deg,10,2.829,2.815936591773488
+touch,touch_count,10,7.4,3.3730961708462712
+touch,wrong_selections,10,0.0,0.0
+touch,tracking_lost,10,0.0,0.0
+reticle,completion_time_s,10,14.951,7.788567761647695
+reticle,pos_error_cm,10,1.505,0.4521614755814564
+reticle,yaw_error_deg,10,2.5,3.5355339059327378
+reticle,touch_count,10,36.0,13.824294235551815
+reticle,wrong_selections,10,0.0,0.0
+reticle,tracking_lost,10,0.1,0.31622776601683794
