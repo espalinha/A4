@@ -1,19 +1,304 @@
-import * as THREE from 'three';
-const $=id=>document.getElementById(id), scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(), renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
-renderer.setSize(innerWidth,innerHeight); renderer.xr.enabled=true; document.body.appendChild(renderer.domElement); scene.add(new THREE.HemisphereLight(0xffffff,0x666666,2));
-const reticle=new THREE.Mesh(new THREE.RingGeometry(.035,.045,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x77ffcc})); reticle.matrixAutoUpdate=false; reticle.visible=false; scene.add(reticle);
-let trial=1, anchor, session, source, space, objects=[], target, selected, started, wrong=0, touches=0, lost=0, missing=false, moving=false, placed=false, done=false, pointers=new Map(), lastAngle, plane=new THREE.Plane(new THREE.Vector3(0,1,0),0), ray=new THREE.Raycaster(), prev;
-const colors=[0xff5b68,0x4da8ff,0xffcc50];
-function shape(color,ghost=false){let group=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color,transparent:ghost,opacity:ghost?.4:1}); for(const [x,z,w,d] of [[0,0,.12,.07],[.035,.055,.05,.08]]){let m=new THREE.Mesh(new THREE.BoxGeometry(w,.05,d),mat);m.position.set(x,.025,z);group.add(m)} scene.add(group);return group}
-const scenarios=[{c:0,y:30,a:0},{c:1,y:90,a:30},{c:2,y:150,a:60},{c:0,y:220,a:90},{c:1,y:300,a:120}];
-function place(){anchor=new THREE.Vector3().setFromMatrixPosition(reticle.matrix);plane.constant=-anchor.y;placed=true;newTrial()}
-function newTrial(){objects.forEach(o=>scene.remove(o));if(target)scene.remove(target);objects=[];selected=null;started=undefined;wrong=0;touches=0;lost=0;missing=false;moving=false;done=false;pointers.clear();prev=null;$('next').style.display='none';let spec=scenarios[trial-1];target=shape(colors[spec.c],true);target.position.copy(anchor);target.rotation.y=THREE.MathUtils.degToRad(spec.y);objects=colors.map((color,i)=>{let o=shape(color);let a=THREE.MathUtils.degToRad(spec.a)+i*Math.PI*2/3;o.position.set(anchor.x+.4*Math.cos(a),anchor.y,anchor.z+.4*Math.sin(a));o.userData.correct=i===spec.c;return o});$('status').textContent='Teste '+trial+'/5: toque no objeto da cor do alvo.'}
-function point(e){let r=renderer.domElement.getBoundingClientRect();ray.setFromCamera({x:(e.clientX-r.left)/r.width*2-1,y:-(e.clientY-r.top)/r.height*2+1},camera);let p=new THREE.Vector3();return ray.ray.intersectPlane(plane,p)?p:null}
-function check(){if(!selected||done)return;let pos=selected.position.distanceTo(target.position), yaw=Math.abs(THREE.MathUtils.euclideanModulo(selected.rotation.y-target.rotation.y+Math.PI,2*Math.PI)-Math.PI);if(pos<=.02&&yaw<=THREE.MathUtils.degToRad(10)){done=true;let row=[$('pid').value,$('tech').value,trial,((performance.now()-started)/1000).toFixed(2),(pos*100).toFixed(2),THREE.MathUtils.radToDeg(yaw).toFixed(2),wrong,touches,lost];let rows=JSON.parse(localStorage.a4rows||'[]');rows.push(row);localStorage.a4rows=JSON.stringify(rows);$('status').textContent=trial===5?'Encaixado! Os cinco testes foram salvos.':'Encaixado! Teste salvo.';$('next').textContent=trial===5?'Concluir':'Próximo teste';$('next').style.display='block'}}
-$('start').onclick=async()=>{try{if(!navigator.xr)throw Error('WebXR indisponível. Use Chrome em Android compatível, via HTTPS.');try { session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test'],optionalFeatures:['dom-overlay'],domOverlay:{root:$('hud')}}); } catch (first) { session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test']}); }renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(session);space=await session.requestReferenceSpace('viewer');source=await session.requestHitTestSource({space});$('setup').style.display='none';$('hud').style.display='block';$('controls').style.display=$('tech').value==='reticle'?'flex':'none';session.addEventListener('end',()=>location.reload());renderer.setAnimationLoop((t,frame)=>{if(frame){let hits=frame.getHitTestResults(source), pose=hits[0]?.getPose(renderer.xr.getReferenceSpace());reticle.visible=!!pose;if(pose)reticle.matrix.fromArray(pose.transform.matrix);let bad=!pose||!frame.getViewerPose(renderer.xr.getReferenceSpace());if(placed&&!done&&bad&&!missing)lost++;missing=bad;if(moving&&selected&&pose){selected.position.setFromMatrixPosition(reticle.matrix);selected.position.y=-plane.constant;check()}}renderer.render(scene,camera)})}catch(e){$('error').textContent=e.message}};
-renderer.domElement.addEventListener('pointerdown',e=>{touches++;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(!placed){if(reticle.visible)place();return}if(done)return;if(pointers.size===1){ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-e.clientY/innerHeight*2+1},camera);let hit=ray.intersectObjects(objects,true)[0];if(hit){let obj=hit.object.parent;if(started===undefined)started=performance.now();if(!obj.userData.correct){wrong++;return} if(selected!==obj){selected=obj;obj.children.forEach(m=>m.material.emissive.setHex(0x444444));$('status').textContent='Alinhe o objeto ao alvo.'} }prev=point(e)}else if(pointers.size===2){let a=[...pointers.values()];lastAngle=Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)}});
-renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(!selected||done||$('tech').value!=='touch')return;if(pointers.size===1){let p=point(e);if(p&&prev){selected.position.add(p.clone().sub(prev));prev=p;check()}}else if(pointers.size===2){let a=[...pointers.values()], angle=Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x);selected.rotation.y-=THREE.MathUtils.euclideanModulo(angle-lastAngle+Math.PI,2*Math.PI)-Math.PI;lastAngle=angle;check()}});function up(e){pointers.delete(e.pointerId);prev=null}renderer.domElement.addEventListener('pointerup',up);renderer.domElement.addEventListener('pointercancel',up);
-$('move').onpointerdown=e=>{touches++;moving=true;e.target.setPointerCapture(e.pointerId)};$('move').onpointerup=$('move').onpointercancel=()=>moving=false;for(let [id,dir] of [['left',1],['right',-1]])$(id).onclick=()=>{touches++;if(selected&&!done){selected.rotation.y+=dir*THREE.MathUtils.degToRad(5);check()}};
-$('download').onclick=()=>{let rows=JSON.parse(localStorage.a4rows||'[]'),csv=['participant_id,technique,trial,completion_time_s,pos_error_cm,yaw_error_deg,wrong_selections,touch_count,tracking_lost',...rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(','))].join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dados.csv';a.click();URL.revokeObjectURL(a.href)};
+import * as THREE from "three";
+const $ = (id) => document.getElementById(id),
+  scene = new THREE.Scene(),
+  camera = new THREE.PerspectiveCamera(),
+  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 2));
+const reticle = new THREE.Mesh(
+  new THREE.RingGeometry(0.035, 0.045, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0x77ffcc }),
+);
+reticle.matrixAutoUpdate = false;
+reticle.visible = false;
+scene.add(reticle);
+let trial = 1,
+  anchor,
+  session,
+  source,
+  space,
+  objects = [],
+  target,
+  selected,
+  started,
+  wrong = 0,
+  touches = 0,
+  lost = 0,
+  missing = false,
+  moving = false,
+  placed = false,
+  done = false,
+  pointers = new Map(),
+  lastAngle,
+  plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
+  ray = new THREE.Raycaster(),
+  prev;
+const colors = [0xff5b68, 0x4da8ff, 0xffcc50];
+function shape(color, ghost = false) {
+  let group = new THREE.Group(),
+    mat = new THREE.MeshStandardMaterial({
+      color,
+      transparent: ghost,
+      opacity: ghost ? 0.4 : 1,
+    });
+  for (const [x, z, w, d] of [
+    [0, 0, 0.12, 0.07],
+    [0.035, 0.055, 0.05, 0.08],
+  ]) {
+    let m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), mat);
+    m.position.set(x, 0.025, z);
+    group.add(m);
+  }
+  scene.add(group);
+  return group;
+}
+const scenarios = [
+  { c: 0, y: 30, a: 0 },
+  { c: 1, y: 90, a: 30 },
+  { c: 2, y: 150, a: 60 },
+  { c: 0, y: 220, a: 90 },
+  { c: 1, y: 300, a: 120 },
+];
+function place() {
+  anchor = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+  plane.constant = -anchor.y;
+  placed = true;
+  newTrial();
+}
+function newTrial() {
+  objects.forEach((o) => scene.remove(o));
+  if (target) scene.remove(target);
+  objects = [];
+  selected = null;
+  started = undefined;
+  wrong = 0;
+  touches = 0;
+  lost = 0;
+  missing = false;
+  moving = false;
+  done = false;
+  pointers.clear();
+  prev = null;
+  $("next").style.display = "none";
+  let spec = scenarios[trial - 1];
+  target = shape(colors[spec.c], true);
+  target.position.copy(anchor);
+  target.rotation.y = THREE.MathUtils.degToRad(spec.y);
+  objects = colors.map((color, i) => {
+    let o = shape(color);
+    let a = THREE.MathUtils.degToRad(spec.a) + (i * Math.PI * 2) / 3;
+    o.position.set(
+      anchor.x + 0.4 * Math.cos(a),
+      anchor.y,
+      anchor.z + 0.4 * Math.sin(a),
+    );
+    o.userData.correct = i === spec.c;
+    return o;
+  });
+  $("status").textContent =
+    "Teste " + trial + "/5: toque no objeto da cor do alvo.";
+}
+function point(e) {
+  let r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(
+    {
+      x: ((e.clientX - r.left) / r.width) * 2 - 1,
+      y: (-(e.clientY - r.top) / r.height) * 2 + 1,
+    },
+    camera,
+  );
+  let p = new THREE.Vector3();
+  return ray.ray.intersectPlane(plane, p) ? p : null;
+}
+function check() {
+  if (!selected || done) return;
+  let pos = selected.position.distanceTo(target.position),
+    yaw = Math.abs(
+      THREE.MathUtils.euclideanModulo(
+        selected.rotation.y - target.rotation.y + Math.PI,
+        2 * Math.PI,
+      ) - Math.PI,
+    );
+  if (pos <= 0.02 && yaw <= THREE.MathUtils.degToRad(10)) {
+    done = true;
+    let row = [
+      $("pid").value,
+      $("tech").value,
+      trial,
+      ((performance.now() - started) / 1000).toFixed(2),
+      (pos * 100).toFixed(2),
+      THREE.MathUtils.radToDeg(yaw).toFixed(2),
+      wrong,
+      touches,
+      lost,
+    ];
+    let rows = JSON.parse(localStorage.a4rows || "[]");
+    rows.push(row);
+    localStorage.a4rows = JSON.stringify(rows);
+    $("status").textContent =
+      trial === 5
+        ? "Encaixado! Os cinco testes foram salvos."
+        : "Encaixado! Teste salvo.";
+    $("next").textContent = trial === 5 ? "Concluir" : "Próximo teste";
+    $("next").style.display = "block";
+  }
+}
+$("start").onclick = async () => {
+  try {
+    if (!navigator.xr)
+      throw Error(
+        "WebXR indisponível. Use Chrome em Android compatível, via HTTPS.",
+      );
+    try {
+      session = await navigator.xr.requestSession("immersive-ar", {
+        requiredFeatures: ["hit-test"],
+        optionalFeatures: ["dom-overlay"],
+        domOverlay: { root: $("hud") },
+      });
+    } catch (first) {
+      session = await navigator.xr.requestSession("immersive-ar", {
+        requiredFeatures: ["hit-test"],
+      });
+    }
+    renderer.xr.setReferenceSpaceType("local");
+    await renderer.xr.setSession(session);
+    space = await session.requestReferenceSpace("viewer");
+    source = await session.requestHitTestSource({ space });
+    $("setup").style.display = "none";
+    $("hud").style.display = "block";
+    $("controls").style.display =
+      $("tech").value === "reticle" ? "flex" : "none";
+    session.addEventListener("end", () => location.reload());
+    renderer.setAnimationLoop((t, frame) => {
+      if (frame) {
+        let hits = frame.getHitTestResults(source),
+          pose = hits[0]?.getPose(renderer.xr.getReferenceSpace());
+        reticle.visible = !!pose;
+        if (pose) reticle.matrix.fromArray(pose.transform.matrix);
+        let bad =
+          !pose || !frame.getViewerPose(renderer.xr.getReferenceSpace());
+        if (placed && !done && bad && !missing) lost++;
+        missing = bad;
+        if (moving && selected && pose) {
+          selected.position.setFromMatrixPosition(reticle.matrix);
+          selected.position.y = -plane.constant;
+          check();
+        }
+      }
+      renderer.render(scene, camera);
+    });
+  } catch (e) {
+    $("error").textContent = e.message;
+  }
+};
+renderer.domElement.addEventListener("pointerdown", (e) => {
+  touches++;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!placed) {
+    if (reticle.visible) place();
+    return;
+  }
+  if (done) return;
+  if (pointers.size === 1) {
+    ray.setFromCamera(
+      {
+        x: (e.clientX / innerWidth) * 2 - 1,
+        y: (-e.clientY / innerHeight) * 2 + 1,
+      },
+      camera,
+    );
+    let hit = ray.intersectObjects(objects, true)[0];
+    if (hit) {
+      let obj = hit.object.parent;
+      if (started === undefined) started = performance.now();
+      if (!obj.userData.correct) {
+        wrong++;
+        return;
+      }
+      if (selected !== obj) {
+        selected = obj;
+        obj.children.forEach((m) => m.material.emissive.setHex(0x444444));
+        $("status").textContent = "Alinhe o objeto ao alvo.";
+      }
+    }
+    prev = point(e);
+  } else if (pointers.size === 2) {
+    let a = [...pointers.values()];
+    lastAngle = Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x);
+  }
+});
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!selected || done || $("tech").value !== "touch") return;
+  if (pointers.size === 1) {
+    let p = point(e);
+    if (p && prev) {
+      selected.position.add(p.clone().sub(prev));
+      prev = p;
+      check();
+    }
+  } else if (pointers.size === 2) {
+    let a = [...pointers.values()],
+      angle = Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x);
+    selected.rotation.y -=
+      THREE.MathUtils.euclideanModulo(
+        angle - lastAngle + Math.PI,
+        2 * Math.PI,
+      ) - Math.PI;
+    lastAngle = angle;
+    check();
+  }
+});
+function up(e) {
+  pointers.delete(e.pointerId);
+  prev = null;
+}
+renderer.domElement.addEventListener("pointerup", up);
+renderer.domElement.addEventListener("pointercancel", up);
+$("move").onpointerdown = (e) => {
+  touches++;
+  moving = true;
+  e.target.setPointerCapture(e.pointerId);
+};
+$("move").onpointerup = $("move").onpointercancel = () => (moving = false);
+for (let [id, dir] of [
+  ["left", 1],
+  ["right", -1],
+])
+  $(id).onclick = () => {
+    touches++;
+    if (selected && !done) {
+      selected.rotation.y += dir * THREE.MathUtils.degToRad(5);
+      check();
+    }
+  };
+$("download").onclick = () => {
+  let rows = JSON.parse(localStorage.a4rows || "[]"),
+    csv = [
+      "participant_id,technique,trial,completion_time_s,pos_error_cm,yaw_error_deg,wrong_selections,touch_count,tracking_lost",
+      ...rows.map((r) =>
+        r.map((x) => '"' + String(x).replaceAll('"', '""') + '"').join(","),
+      ),
+    ].join("\n");
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "dados.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
-$('exit').onclick=()=>{if(session)session.end()};$('next').onclick=()=>{if(!done)return;if(trial===5){session.end();return}trial++;newTrial()};
+$("exit").onclick = () => {
+  if (session) session.end();
+};
+$("next").onclick = () => {
+  if (!done) return;
+  if (trial === 5) {
+    session.end();
+    return;
+  }
+  trial++;
+  newTrial();
+};
